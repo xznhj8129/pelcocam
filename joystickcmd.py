@@ -69,18 +69,34 @@ def map_speed(value):
     return int(abs(value) * 0x3F)
 
 
-def send_data(command2, b1, b2, command1=0x00):
-    #print(command2, b1, b2)
-    cmd = pelco._construct_cmd(command2, b1, b2)
+
+def send_data(command2, b1, b2, command1=0x00, address=0x01):
+    print(command2, b1, b2, command1)
+    # Pass the command1 and address as bytes to _construct_cmd
+    cmd = pelco._construct_cmd(
+        command2, 
+        b1, 
+        b2, 
+        _address=bytes([address]), 
+        _command1=bytes([command1])
+    )
+    print(cmd.hex())
     ser.write(cmd)
     response = ser.read(100)
-    #if len(response)>0: print(response)
     return response
+
+def iris_open(speed=0x3F):
+    # Iris Open: command1 bit 5 = 0x20, command2 remains 0 (STOP)
+    send_data('STOP', speed, 0x00, command1=0x20)
+
+def iris_close(speed=0x3F):
+    # Iris Close: command1 bit 4 = 0x10
+    send_data('STOP', speed, 0x00, command1=0x10)
 
 
 pelco = PelcoFunctions()
 # Open the serial port (replace '/dev/ttyUSB0' with your actual serial port)
-PORT = '/dev/ttyUSB0'
+PORT = '/dev/ttyUSB1'
 ser = serial.Serial(
     port=PORT,
     baudrate=9600,
@@ -119,6 +135,8 @@ autofocus = False
 buttondebounce = [False] * 12
 setautofocus = True
 nv = False
+tiltdata = None
+pandata = None
 
 #input('...')
 #for i in range(255):
@@ -146,10 +164,10 @@ try:
         axis,buttons = get_joystick(joystick)
         # Get axis values (assuming axis 0 is left/right and axis 1 is up/down)
         pan = round(axis[0], 2)  # Horizontal axis
-        tilt = round(axis[1] *-1, 2)  # Vertical axis
+        tilt = round(axis[1] *1, 2)  # Vertical axis
 
-        focus+= (buttons[5] - buttons[7])/100.0
-        zoom+= (buttons[6] - buttons[4])/100.0
+        focus+= (buttons[5] - buttons[7])/10.0
+        zoom+= (buttons[6] - buttons[4])/10.0
         if zoom < 0: zoom = 0
         #zoom = (round(joystick.get_axis(2), 1) - 1) / -2
         #print(1, round(joystick.get_axis(0)))
@@ -171,7 +189,7 @@ try:
             focusmove = True
             setfocus = focus
             msb, lsb = set_zoom(focus)
-            send_data('SET-FOCUS', msb, lsb)
+            #send_data('SET-FOCUS', msb, lsb)
 
         if pan < -0.1:
             panmove = 'LEFT'
@@ -198,9 +216,13 @@ try:
         elif tiltmove:
             send_data(tiltmove, tilt_speed, tilt_speed)
             stopped = False
-
+        
         if buttons[9] == 1 and (buttons[9] != buttondebounce[0]):
             send_data('SET-PRESET', 0x00, 0x5F, command1=0x00) #BINGO! MENU!
+
+        if buttons[2] == 1 and (buttons[2] != buttondebounce[0]):
+            print('Iris open button pressed')
+            iris_open()
 
         if buttons[3] == 1 and (buttons[3] != buttondebounce[0]):
             nv = not nv
@@ -226,9 +248,9 @@ try:
             send_data('STOP', 0x00, 0x00)
             stopped = True
 
-        pandata = decode_pelco_d_response(send_data('QUERY-PAN', 0x00, 0x00))[1] / 100.0
-        tiltdata = decode_pelco_d_response(send_data('QUERY-TILT', 0x00, 0x00))[1] / 100.0
-        print(pandata,tiltdata)
+        #pandata = decode_pelco_d_response(send_data('QUERY-PAN', 0x00, 0x00))[1] / 100.0
+        #tiltdata = decode_pelco_d_response(send_data('QUERY-TILT', 0x00, 0x00))[1] / 100.0
+        #print(pandata,tiltdata)
 
         #time.sleep(0.1)
 

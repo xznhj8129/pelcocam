@@ -108,7 +108,7 @@ class PelcoFunctions:
     def __init__(self):
         self.function_code = pelcod_function_code
 
-    def _construct_cmd(self, _command2, _data1, _data2, _address=b'\x01', _command1=b'\x00'):
+    def _construct_cmd(self, _command2, _data1, _data2, _address=b'\x00', _command1=b'\x00'):
         # DEBUG
         #print(f"DEBUG _construct_cmd: {_command2} {_data1} {_data2}\n")
         self.frame = pelcod_frame
@@ -167,6 +167,6 @@ class PelcoFunctions:
 # Example usage
 if __name__ == "__main__":
     pelco = PelcoFunctions()
-    cmd, _ = pelco._construct_cmd('QUERY-PAN', 0x00, 0x00)
+    cmd, _ = pelco._construct_cmd('QUERY-ZOOM', 0x00, 0x00)
     print(f"Constructed Command: {cmd.hex()}")
 
